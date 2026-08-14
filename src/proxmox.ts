@@ -1,5 +1,6 @@
 import https from "node:https";
 import { readFile } from "node:fs/promises";
+import { brotliDecompressSync, gunzipSync, inflateSync } from "node:zlib";
 import type { ApiEndpoint, HttpMethod, JsonObject, JsonValue } from "./types.js";
 import { asJsonValue, errorMessage } from "./util.js";
 import { callHelper } from "./helper-client.js";
@@ -8,6 +9,17 @@ export interface ProxmoxClientOptions { baseUrl: string; tokenId?: string; token
 function scalar(value: JsonValue): string { return value !== null && typeof value === "object" ? JSON.stringify(value) : String(value); }
 function fillPath(template: string, pathParams: Record<string, string>): string {
   return template.replace(/\{([^}]+)\}/g, (_match, name: string) => { const value = pathParams[name]; if (!value) throw new Error(`Missing required path parameter '${name}'`); return encodeURIComponent(value); });
+}
+export function decodeProxmoxResponse(body: Buffer, contentEncoding?: string, maxBytes = 10 * 1024 * 1024): string {
+  if (body.length > maxBytes) throw new Error(`Proxmox API response exceeds the ${maxBytes}-byte limit`);
+  const encoding = (contentEncoding ?? "identity").trim().toLowerCase(); const options = { maxOutputLength: maxBytes };
+  const decoded = encoding === "gzip" ? gunzipSync(body, options)
+    : encoding === "deflate" ? inflateSync(body, options)
+      : encoding === "br" ? brotliDecompressSync(body, options)
+        : encoding === "identity" || encoding === "" ? body
+          : (() => { throw new Error(`Unsupported Proxmox API content encoding '${contentEncoding}'`); })();
+  if (decoded.length > maxBytes) throw new Error(`Decoded Proxmox API response exceeds the ${maxBytes}-byte limit`);
+  return decoded.toString("utf8");
 }
 
 export class ProxmoxClient {
@@ -37,9 +49,13 @@ export class ProxmoxClient {
         method, ca, servername: this.options.tlsServername, rejectUnauthorized: true, timeout: 120000,
         headers: { Accept: "application/json", Authorization: `PVEAPIToken=${this.options.tokenId}=${this.options.tokenSecret}`, ...(body ? { "Content-Type": "application/x-www-form-urlencoded", "Content-Length": Buffer.byteLength(body) } : {}) }
       }, (response) => {
-        let responseBody = ""; response.setEncoding("utf8"); response.on("data", (chunk: string) => { responseBody += chunk; });
+        const chunks: Buffer[] = []; let received = 0; let oversized = false;
+        response.on("data", (chunk: Buffer) => { received += chunk.length; if (received > 10 * 1024 * 1024) { oversized = true; response.destroy(new Error("Proxmox API response exceeds the 10485760-byte limit")); return; } chunks.push(chunk); });
+        response.on("error", reject);
         response.on("end", () => {
+          if (oversized) return;
           try {
+            const responseBody = decodeProxmoxResponse(Buffer.concat(chunks), typeof response.headers["content-encoding"] === "string" ? response.headers["content-encoding"] : undefined);
             const parsed = responseBody ? JSON.parse(responseBody) as { data?: unknown; errors?: unknown } : {};
             if (!response.statusCode || response.statusCode < 200 || response.statusCode >= 300) { reject(new Error(`Proxmox API ${method} ${apiPath} returned ${response.statusCode}: ${JSON.stringify(parsed.errors ?? parsed.data ?? responseBody).slice(0, 2000)}`)); return; }
             resolve(asJsonValue(parsed.data ?? null));
