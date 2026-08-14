@@ -16,6 +16,7 @@ async function main(): Promise<void> {
     print(await keys.create(name, profile, flag(args, "policy"), flag(args, "expires"))); return;
   }
   if (domain === "key" && command === "list") { print(await keys.list()); return; }
+  if (domain === "key" && command === "rotate") { const target = args[0]; if (!target) throw new Error("Usage: proxmox-mcp key rotate ID_OR_NAME [--expires ISO]"); print(await keys.rotate(target, flag(args, "expires"))); return; }
   if (domain === "key" && command === "revoke") { const target = args[0]; if (!target) throw new Error("Usage: proxmox-mcp key revoke ID_OR_NAME"); print(await keys.revoke(target)); return; }
   if (domain === "policy" && command === "list") { print(await new PolicyStore(config.policiesFile, [...config.protectedPaths, ...config.protectedIdentifiers]).list()); return; }
   if (domain === "schema" && (command === "refresh" || command === "status")) { const registry = await SchemaRegistry.load(config.schemaSource, config.schemaCache); print(registry.snapshot); return; }
@@ -24,6 +25,6 @@ async function main(): Promise<void> {
     try { helper = await callHelper(config.helperSocket, "service_status", { service: "pveproxy.service" }); } catch (error) { helper = { error: errorMessage(error) }; }
     print({ schema: { source: registry.snapshot.source, hash: registry.snapshot.sha256, endpointCount: registry.snapshot.endpointCount, lastError: registry.snapshot.lastError ?? null }, helper, keys: (await keys.list()).length }); return;
   }
-  throw new Error("Usage: proxmox-mcp key create|list|revoke | policy list | schema refresh|status | doctor");
+  throw new Error("Usage: proxmox-mcp key create|list|rotate|revoke | policy list | schema refresh|status | doctor");
 }
 main().catch((error) => { process.stderr.write(`${errorMessage(error)}\n`); process.exit(1); });

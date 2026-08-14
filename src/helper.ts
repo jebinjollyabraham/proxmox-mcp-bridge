@@ -93,6 +93,12 @@ async function execute(request: HelperRequest): Promise<JsonValue> {
       const service = stringParam(params, "service"); if (!/^[a-zA-Z0-9@_.:-]+$/.test(service)) throw new Error("Invalid systemd service name");
       return spawnCapture("/bin/systemctl", ["status", "--no-pager", "--", service], undefined, 15000);
     }
+    case "service_control": {
+      const service = stringParam(params, "service"); const action = stringParam(params, "action");
+      if (!/^[a-zA-Z0-9@_.:-]+$/.test(service)) throw new Error("Invalid systemd service name");
+      if (!["start", "stop", "restart", "reload", "enable", "disable"].includes(action)) throw new Error("Unsupported systemd service action");
+      return spawnCapture("/bin/systemctl", [action, "--", service], undefined, 120000);
+    }
     case "breakglass_submit": {
       const operation = objectParams(params.operation); const actionType = stringParam(operation, "type"); const target = stringParam(operation, "target");
       if (!containsProtected(target)) throw new Error("Break-glass is only valid for configured protected model targets");

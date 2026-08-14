@@ -105,7 +105,7 @@ function protectedMutation(action: PolicyAction, protectedTerms: string[]): bool
 function builtinDecision(profile: Principal["profile"], action: PolicyAction): PolicyDecision {
   if (profile === "root") return { effect: "allow", reason: "Root profile allows this action" };
   if (profile === "admin") {
-    if (action.action.startsWith("api:") || action.action.startsWith("fs:") || action.action === "service:status" || action.action === "audit:read") return { effect: "allow", reason: "Admin profile allows API and filesystem administration" };
+    if (action.action.startsWith("api:") || action.action.startsWith("fs:") || action.action.startsWith("service:") || action.action === "audit:read") return { effect: "allow", reason: "Admin profile allows API, filesystem, and service administration" };
     return { effect: "deny", reason: "Admin profile does not allow host command or key administration" };
   }
   if (profile === "operator") {

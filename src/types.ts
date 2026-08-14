@@ -56,7 +56,7 @@ export interface PolicyDecision {
 
 export interface HelperRequest {
   id: string;
-  action: "pvesh" | "exec" | "fs_read" | "fs_write" | "fs_list" | "fs_stat" | "service_status" | "breakglass_submit";
+  action: "pvesh" | "exec" | "fs_read" | "fs_write" | "fs_list" | "fs_stat" | "service_status" | "service_control" | "breakglass_submit";
   params: JsonObject;
 }
 

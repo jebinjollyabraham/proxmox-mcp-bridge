@@ -137,11 +137,76 @@ export function createProxmoxServer(principal: Principal, dependencies: ServerDe
     annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true }
   }, async () => { try { return output(await invoke("GET", "/storage", {}, {})); } catch (error) { return failure(error); } });
 
+  server.registerTool("proxmox_node_health", {
+    title: "Get Node Health", description: "Return current CPU, memory, load, uptime, kernel, and boot status for one node.", inputSchema: z.object({ node: z.string() }).strict(), outputSchema: ResultSchema,
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true }
+  }, async ({ node }) => { try { return output(await invoke("GET", "/nodes/{node}/status", { node }, {})); } catch (error) { return failure(error); } });
+
+  server.registerTool("proxmox_node_disks", {
+    title: "List Node Disks", description: "List physical disks known to a Proxmox node.", inputSchema: z.object({ node: z.string(), params: ParamsSchema }).strict(), outputSchema: ResultSchema,
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true }
+  }, async ({ node, params }) => { try { return output(await invoke("GET", "/nodes/{node}/disks/list", { node }, asJsonValue(params) as JsonObject)); } catch (error) { return failure(error); } });
+
+  server.registerTool("proxmox_node_network", {
+    title: "List Node Network Configuration", description: "Return installed network interfaces and configuration for one node.", inputSchema: z.object({ node: z.string() }).strict(), outputSchema: ResultSchema,
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true }
+  }, async ({ node }) => { try { return output(await invoke("GET", "/nodes/{node}/network", { node }, {})); } catch (error) { return failure(error); } });
+
+  server.registerTool("proxmox_node_logs", {
+    title: "Read Node Journal", description: "Read a bounded slice of the system journal through the official node API.", inputSchema: z.object({ node: z.string(), params: ParamsSchema }).strict(), outputSchema: ResultSchema,
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true }
+  }, async ({ node, params }) => { try { return output(await invoke("GET", "/nodes/{node}/journal", { node }, asJsonValue(params) as JsonObject)); } catch (error) { return failure(error); } });
+
+  server.registerTool("proxmox_node_updates", {
+    title: "List Node Package Updates", description: "List available package updates for one node without installing them.", inputSchema: z.object({ node: z.string() }).strict(), outputSchema: ResultSchema,
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true }
+  }, async ({ node }) => { try { return output(await invoke("GET", "/nodes/{node}/apt/update", { node }, {})); } catch (error) { return failure(error); } });
+
   server.registerTool("proxmox_guest_power", {
     title: "Control Guest Power", description: "Start, stop, shut down, reboot, reset, suspend, or resume a QEMU VM or LXC container through the official API.",
     inputSchema: z.object({ node: z.string(), type: z.enum(["qemu", "lxc"]), vmid: z.number().int().positive(), action: z.enum(["start", "stop", "shutdown", "reboot", "reset", "suspend", "resume"]), params: ParamsSchema }).strict(), outputSchema: ResultSchema,
     annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true }
   }, async ({ node, type, vmid, action, params }) => { try { return output(await invoke("POST", `/nodes/{node}/${type}/{vmid}/status/${action}`, { node, vmid: String(vmid) }, asJsonValue(params) as JsonObject)); } catch (error) { return failure(error); } });
+
+  server.registerTool("proxmox_guest_get_config", {
+    title: "Get Guest Configuration", description: "Read the installed configuration for a QEMU VM or LXC container.", inputSchema: z.object({ node: z.string(), type: z.enum(["qemu", "lxc"]), vmid: z.number().int().positive() }).strict(), outputSchema: ResultSchema,
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true }
+  }, async ({ node, type, vmid }) => { try { return output(await invoke("GET", `/nodes/{node}/${type}/{vmid}/config`, { node, vmid: String(vmid) }, {})); } catch (error) { return failure(error); } });
+
+  server.registerTool("proxmox_guest_update_config", {
+    title: "Update Guest Configuration", description: "Update QEMU VM or LXC configuration through the installed official schema and policy engine.", inputSchema: z.object({ node: z.string(), type: z.enum(["qemu", "lxc"]), vmid: z.number().int().positive(), params: ParamsSchema }).strict(), outputSchema: ResultSchema,
+    annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true }
+  }, async ({ node, type, vmid, params }) => { try { return output(await invoke("PUT", `/nodes/{node}/${type}/{vmid}/config`, { node, vmid: String(vmid) }, asJsonValue(params) as JsonObject)); } catch (error) { return failure(error); } });
+
+  server.registerTool("proxmox_guest_snapshot_list", {
+    title: "List Guest Snapshots", description: "List snapshots for a QEMU VM or LXC container.", inputSchema: z.object({ node: z.string(), type: z.enum(["qemu", "lxc"]), vmid: z.number().int().positive() }).strict(), outputSchema: ResultSchema,
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true }
+  }, async ({ node, type, vmid }) => { try { return output(await invoke("GET", `/nodes/{node}/${type}/{vmid}/snapshot`, { node, vmid: String(vmid) }, {})); } catch (error) { return failure(error); } });
+
+  server.registerTool("proxmox_guest_snapshot_create", {
+    title: "Create Guest Snapshot", description: "Create a named snapshot for a QEMU VM or LXC container.", inputSchema: z.object({ node: z.string(), type: z.enum(["qemu", "lxc"]), vmid: z.number().int().positive(), snapname: z.string().min(1), params: ParamsSchema }).strict(), outputSchema: ResultSchema,
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true }
+  }, async ({ node, type, vmid, snapname, params }) => { try { return output(await invoke("POST", `/nodes/{node}/${type}/{vmid}/snapshot`, { node, vmid: String(vmid) }, { ...(asJsonValue(params) as JsonObject), snapname })); } catch (error) { return failure(error); } });
+
+  server.registerTool("proxmox_guest_snapshot_delete", {
+    title: "Delete Guest Snapshot", description: "Delete one named QEMU VM or LXC snapshot.", inputSchema: z.object({ node: z.string(), type: z.enum(["qemu", "lxc"]), vmid: z.number().int().positive(), snapname: z.string().min(1), params: ParamsSchema }).strict(), outputSchema: ResultSchema,
+    annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true }
+  }, async ({ node, type, vmid, snapname, params }) => { try { return output(await invoke("DELETE", `/nodes/{node}/${type}/{vmid}/snapshot/{snapname}`, { node, vmid: String(vmid), snapname }, asJsonValue(params) as JsonObject)); } catch (error) { return failure(error); } });
+
+  server.registerTool("proxmox_guest_snapshot_rollback", {
+    title: "Roll Back Guest Snapshot", description: "Roll a QEMU VM or LXC container back to one named snapshot.", inputSchema: z.object({ node: z.string(), type: z.enum(["qemu", "lxc"]), vmid: z.number().int().positive(), snapname: z.string().min(1), params: ParamsSchema }).strict(), outputSchema: ResultSchema,
+    annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true }
+  }, async ({ node, type, vmid, snapname, params }) => { try { return output(await invoke("POST", `/nodes/{node}/${type}/{vmid}/snapshot/{snapname}/rollback`, { node, vmid: String(vmid), snapname }, asJsonValue(params) as JsonObject)); } catch (error) { return failure(error); } });
+
+  server.registerTool("proxmox_guest_backup", {
+    title: "Back Up Guest", description: "Start a vzdump backup for one VM or container and return its UPID.", inputSchema: z.object({ node: z.string(), vmid: z.number().int().positive(), storage: z.string().optional(), mode: z.enum(["snapshot", "suspend", "stop"]).optional(), params: ParamsSchema }).strict(), outputSchema: ResultSchema,
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true }
+  }, async ({ node, vmid, storage, mode, params }) => { try { return output(await invoke("POST", "/nodes/{node}/vzdump", { node }, { ...(asJsonValue(params) as JsonObject), vmid, ...(storage ? { storage } : {}), ...(mode ? { mode } : {}) })); } catch (error) { return failure(error); } });
+
+  server.registerTool("proxmox_guest_console_metadata", {
+    title: "Create Guest Console Metadata", description: "Create short-lived VNC or SPICE proxy metadata for a QEMU VM or LXC container.", inputSchema: z.object({ node: z.string(), type: z.enum(["qemu", "lxc"]), vmid: z.number().int().positive(), protocol: z.enum(["vnc", "spice"]), params: ParamsSchema }).strict(), outputSchema: ResultSchema,
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true }
+  }, async ({ node, type, vmid, protocol, params }) => { try { return output(await invoke("POST", `/nodes/{node}/${type}/{vmid}/${protocol}proxy`, { node, vmid: String(vmid) }, asJsonValue(params) as JsonObject)); } catch (error) { return failure(error); } });
 
   server.registerTool("proxmox_task_get", {
     title: "Get Proxmox Task Status", description: "Get status for a Proxmox UPID task.", inputSchema: z.object({ node: z.string(), upid: z.string() }).strict(), outputSchema: ResultSchema,
@@ -159,6 +224,16 @@ export function createProxmoxServer(principal: Principal, dependencies: ServerDe
       return output({ timedOut: true, status });
     } catch (error) { return failure(error); }
   });
+
+  server.registerTool("proxmox_task_log", {
+    title: "Read Proxmox Task Log", description: "Read a paginated UPID task log.", inputSchema: z.object({ node: z.string(), upid: z.string(), start: z.number().int().min(0).default(0), limit: z.number().int().min(1).max(1000).default(100) }).strict(), outputSchema: ResultSchema,
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true }
+  }, async ({ node, upid, start, limit }) => { try { return output(await invoke("GET", "/nodes/{node}/tasks/{upid}/log", { node, upid }, { start, limit })); } catch (error) { return failure(error); } });
+
+  server.registerTool("proxmox_task_cancel", {
+    title: "Cancel Proxmox Task", description: "Request cancellation of one running UPID task after policy enforcement.", inputSchema: z.object({ node: z.string(), upid: z.string() }).strict(), outputSchema: ResultSchema,
+    annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true }
+  }, async ({ node, upid }) => { try { return output(await invoke("DELETE", "/nodes/{node}/tasks/{upid}", { node, upid }, {})); } catch (error) { return failure(error); } });
 
   server.registerTool("proxmox_host_exec", {
     title: "Execute Host Command", description: "Run one non-interactive executable with an argument array. No shell expansion is performed. Model paths remain protected.",
@@ -182,6 +257,16 @@ export function createProxmoxServer(principal: Principal, dependencies: ServerDe
     annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true }
   }, async (params) => { try { const action: PolicyAction = { action: "fs:write", resource: params.path, ...(principal.sourceIp ? { sourceIp: principal.sourceIp } : {}), payload: asJsonValue(params) }; return output(await authorized(action, { type: "helper", helperAction: "fs_write", params: asJsonValue(params) as JsonObject })); } catch (error) { return failure(error); } });
 
+  server.registerTool("proxmox_host_download", {
+    title: "Download Host File", description: "Download a bounded host file as base64 for MCP transport.", inputSchema: z.object({ path: z.string() }).strict(), outputSchema: ResultSchema,
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true }
+  }, async ({ path }) => { try { const action: PolicyAction = { action: "fs:read", resource: path, ...(principal.sourceIp ? { sourceIp: principal.sourceIp } : {}) }; return output(await authorized(action, { type: "helper", helperAction: "fs_read", params: { path, encoding: "base64" } })); } catch (error) { return failure(error); } });
+
+  server.registerTool("proxmox_host_upload", {
+    title: "Upload Host File", description: "Upload a bounded base64 file. Protected model paths require break-glass.", inputSchema: z.object({ path: z.string(), content_base64: z.string().max(config.requestLimitBytes * 2), mode: z.number().int().min(0).max(0o777).default(0o640) }).strict(), outputSchema: ResultSchema,
+    annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true }
+  }, async ({ path, content_base64, mode }) => { try { const params: JsonObject = { path, content: content_base64, encoding: "base64", mode }; const action: PolicyAction = { action: "fs:write", resource: path, ...(principal.sourceIp ? { sourceIp: principal.sourceIp } : {}), payload: params }; return output(await authorized(action, { type: "helper", helperAction: "fs_write", params })); } catch (error) { return failure(error); } });
+
   server.registerTool("proxmox_host_list_directory", {
     title: "List Host Directory", description: "List a host directory with a bounded result count.", inputSchema: z.object({ path: z.string(), limit: z.number().int().min(1).max(500).default(100) }).strict(), outputSchema: ResultSchema,
     annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true }
@@ -196,6 +281,11 @@ export function createProxmoxServer(principal: Principal, dependencies: ServerDe
     title: "Get Host Service Status", description: "Return systemd status for one service without changing it.", inputSchema: z.object({ service: z.string().regex(/^[a-zA-Z0-9@_.:-]+$/) }).strict(), outputSchema: ResultSchema,
     annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true }
   }, async ({ service }) => { try { const action: PolicyAction = { action: "service:status", resource: service, service, ...(principal.sourceIp ? { sourceIp: principal.sourceIp } : {}) }; return output(await authorized(action, { type: "helper", helperAction: "service_status", params: { service } })); } catch (error) { return failure(error); } });
+
+  server.registerTool("proxmox_service_control", {
+    title: "Control Host Service", description: "Start, stop, restart, reload, enable, or disable one validated systemd service after policy enforcement.", inputSchema: z.object({ service: z.string().regex(/^[a-zA-Z0-9@_.:-]+$/), action: z.enum(["start", "stop", "restart", "reload", "enable", "disable"]) }).strict(), outputSchema: ResultSchema,
+    annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true }
+  }, async ({ service, action }) => { try { const policyAction: PolicyAction = { action: "service:control", resource: service, service, ...(principal.sourceIp ? { sourceIp: principal.sourceIp } : {}), payload: { action } }; return output(await authorized(policyAction, { type: "helper", helperAction: "service_control", params: { service, action }, timeoutMs: 120000 })); } catch (error) { return failure(error); } });
 
   server.registerTool("proxmox_policy_draft", {
     title: "Draft Custom Access Policy", description: "Validate and store a deterministic policy proposal translated from a person's onboarding rules. Root key required.", inputSchema: PolicyDocumentSchema, outputSchema: ResultSchema,
@@ -228,6 +318,11 @@ export function createProxmoxServer(principal: Principal, dependencies: ServerDe
     title: "List MCP API Keys", description: "List key metadata without key secrets. Root key required.", inputSchema: z.object({}).strict(), outputSchema: ResultSchema,
     annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false }
   }, async () => { try { requireRoot(principal); return output(await keys.list()); } catch (error) { return failure(error); } });
+
+  server.registerTool("proxmox_key_rotate", {
+    title: "Rotate MCP API Key", description: "Revoke one key and return its replacement secret exactly once. Root key required.", inputSchema: z.object({ id_or_name: z.string(), expires_at: z.iso.datetime().optional() }).strict(), outputSchema: ResultSchema,
+    annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: false }
+  }, async ({ id_or_name, expires_at }) => { try { requireRoot(principal); return output(await keys.rotate(id_or_name, expires_at)); } catch (error) { return failure(error); } });
 
   server.registerTool("proxmox_key_revoke", {
     title: "Revoke MCP API Key", description: "Revoke a key by ID or name. Root key required.", inputSchema: z.object({ id_or_name: z.string() }).strict(), outputSchema: ResultSchema,

@@ -8,7 +8,7 @@ This first release targets the `infra` Proxmox VE 9.1.1 host. Portability to oth
 
 - Complete API discovery, description, and invocation from the official local `apidoc.js` schema.
 - Automatic schema refresh after Proxmox updates with last-known-good fallback.
-- Curated node, cluster, guest, storage, power, task, service, command, and file tools.
+- Curated node health, disk, network, journal, updates, guest configuration, snapshots, backups, consoles, task lifecycle, service, command, and file-transfer tools.
 - Optional endpoint-per-tool expansion via `PMCP_TOOL_MODE=expanded`.
 - Per-person `read-only`, `operator`, `admin`, `root`, or deterministic custom policies.
 - Conversational onboarding through the `proxmox_onboarding` MCP prompt.
@@ -38,10 +38,11 @@ The installer adds the Tailnet `/mcp` route without resetting other Tailscale Se
 proxmox-mcp key create --name alice --profile read-only
 proxmox-mcp key create --name operator --profile operator --expires 2027-01-01T00:00:00Z
 proxmox-mcp key list
+proxmox-mcp key rotate alice
 proxmox-mcp key revoke alice
 ```
 
-Key secrets are returned once. Use the onboarding and policy tools to create a custom policy, activate its digest, then bind a key with `--profile custom --policy POLICY_ID`.
+Key secrets are returned once. Rotation atomically revokes the prior key. Use the onboarding and policy tools to create a custom policy, activate its digest, then bind a key with `--profile custom --policy POLICY_ID`.
 
 ## Automatic API alignment
 
@@ -62,7 +63,7 @@ npm ci
 npm test
 ```
 
-The tests cover schema extraction, deterministic expanded names, key hashing and revocation, policy precedence, and the model guard. The real model repository is never used as a destructive test target.
+The tests cover schema extraction, deterministic expanded names, key hashing, rotation and revocation, policy precedence, and the model guard. The real model repository is never used as a destructive test target.
 
 ## License
 
