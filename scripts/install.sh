@@ -74,7 +74,10 @@ EOF
 fi
 for unit in "$SOURCE_DIR"/systemd/*; do install -m 0644 "$unit" "/etc/systemd/system/$(basename "$unit")"; done
 systemctl daemon-reload
-systemctl enable --now proxmox-mcp-helper.service proxmox-mcp.service proxmox-mcp-schema.path proxmox-mcp-breakglass.path
+systemctl enable proxmox-mcp-helper.service proxmox-mcp.service proxmox-mcp-schema.path proxmox-mcp-breakglass.path
+systemctl restart proxmox-mcp-helper.service
+systemctl restart proxmox-mcp.service
+systemctl restart proxmox-mcp-schema.path proxmox-mcp-breakglass.path
 if [[ ! -s /var/lib/proxmox-mcp-bridge/keys.json ]]; then
   /usr/bin/node /opt/proxmox-mcp-bridge/dist/cli.js key create --name initial-root --profile root >/root/proxmox-mcp-initial-key.json
   chmod 0600 /root/proxmox-mcp-initial-key.json

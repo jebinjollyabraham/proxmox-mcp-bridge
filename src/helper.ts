@@ -36,7 +36,7 @@ async function assertWritableTarget(target: string): Promise<string> {
 }
 async function spawnCapture(command: string, args: string[], cwd: string | undefined, timeoutMs: number): Promise<JsonValue> {
   return new Promise<JsonValue>((resolve, reject) => {
-    const child = spawn(command, args, { cwd, shell: false, env: { PATH: "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin", LANG: "C.UTF-8" }, stdio: ["ignore", "pipe", "pipe"] });
+    const child = spawn(command, args, { cwd, gid: 0, shell: false, env: { PATH: "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin", LANG: "C.UTF-8" }, stdio: ["ignore", "pipe", "pipe"] });
     let stdout = ""; let stderr = ""; let truncated = false;
     const append = (current: string, chunk: Buffer): string => { const next = current + chunk.toString("utf8"); if (next.length <= config.responseCharacterLimit) return next; truncated = true; return next.slice(0, config.responseCharacterLimit); };
     child.stdout.on("data", (chunk: Buffer) => { stdout = append(stdout, chunk); });
