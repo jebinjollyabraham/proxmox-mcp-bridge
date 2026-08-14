@@ -18,7 +18,7 @@ export class ProxmoxClient {
       if (!rootFallback) throw new Error("This endpoint does not permit API tokens and the current policy does not allow local pvesh fallback"); return this.invokePvesh(endpoint.method, concretePath, params);
     }
     try { return await this.invokeHttp(endpoint.method, concretePath, params); }
-    catch (error) { if (rootFallback && /(?:401|403|token|permission)/i.test(errorMessage(error))) return this.invokePvesh(endpoint.method, concretePath, params); throw error; }
+    catch (error) { if (rootFallback && /returned (?:401|403)\b/i.test(errorMessage(error))) return this.invokePvesh(endpoint.method, concretePath, params); throw error; }
   }
   private async invokePvesh(method: HttpMethod, apiPath: string, params: JsonObject): Promise<JsonValue> {
     const result = await callHelper(this.options.helperSocket, "pvesh", { method, path: apiPath, params }, 120000);

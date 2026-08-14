@@ -43,7 +43,7 @@ export const config = {
   pveEndpoint: process.env.PMCP_PVE_ENDPOINT ?? "https://127.0.0.1:8006/api2/json",
   pveTokenId: process.env.PMCP_PVE_TOKEN_ID,
   pveTokenSecret: process.env.PMCP_PVE_TOKEN_SECRET,
-  pveCaFile: process.env.PMCP_PVE_CA_FILE ?? "/etc/pve/pve-root-ca.pem",
+  pveCaFile: process.env.PMCP_PVE_CA_FILE ?? path.join(configDir, "pki", "pve-root-ca.pem"),
   pveTlsServername: process.env.PMCP_PVE_TLS_SERVERNAME ?? "infra",
   protectedPaths: list("PMCP_PROTECTED_PATHS", ["/mnt/model-repo", "/dev/pve/model-repo", "/dev/mapper/pve-model--repo"]),
   protectedIdentifiers: list("PMCP_PROTECTED_IDENTIFIERS", ["model-repo", "pve/model-repo", "pve-model--repo"])

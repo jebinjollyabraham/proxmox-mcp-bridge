@@ -25,6 +25,8 @@ if ! pveum user list --output-format json | node -e 'let s="";process.stdin.on("
   pveum user add mcp-bridge@pve --comment "Proxmox MCP Bridge service identity"
 fi
 pveum acl modify / --users mcp-bridge@pve --roles Administrator --propagate 1
+install -d -m 0750 -o root -g proxmox-mcp /etc/proxmox-mcp-bridge/pki
+install -m 0640 -o root -g proxmox-mcp /etc/pve/pve-root-ca.pem /etc/proxmox-mcp-bridge/pki/pve-root-ca.pem
 ENV_FILE=/etc/proxmox-mcp-bridge/service.env
 if [[ ! -f "$ENV_FILE" ]]; then
   TOKEN_JSON=$(pveum user token add mcp-bridge@pve service --privsep 0 --output-format json)
@@ -33,6 +35,7 @@ if [[ ! -f "$ENV_FILE" ]]; then
   cat >"$ENV_FILE" <<EOF
 PMCP_PVE_TOKEN_ID=mcp-bridge@pve!service
 PMCP_PVE_TOKEN_SECRET=$TOKEN_SECRET
+PMCP_PVE_CA_FILE=/etc/proxmox-mcp-bridge/pki/pve-root-ca.pem
 PMCP_TOOL_MODE=hybrid
 PMCP_HTTP_HOST=127.0.0.1
 PMCP_HTTP_PORT=8765
