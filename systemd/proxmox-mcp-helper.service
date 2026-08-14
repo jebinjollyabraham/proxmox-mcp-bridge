@@ -1,0 +1,27 @@
+[Unit]
+Description=Proxmox MCP privileged helper
+After=network.target pve-cluster.service
+Before=proxmox-mcp.service
+
+[Service]
+Type=simple
+User=root
+Group=proxmox-mcp
+UMask=0007
+EnvironmentFile=/etc/proxmox-mcp-bridge/service.env
+ExecStart=/usr/bin/node /opt/proxmox-mcp-bridge/dist/helper.js
+Restart=on-failure
+RestartSec=2
+RuntimeDirectory=proxmox-mcp-bridge
+RuntimeDirectoryMode=0770
+ReadOnlyPaths=/mnt/model-repo
+InaccessiblePaths=-/dev/pve/model-repo -/dev/mapper/pve-model--repo
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictRealtime=yes
+LockPersonality=yes
+
+[Install]
+WantedBy=multi-user.target

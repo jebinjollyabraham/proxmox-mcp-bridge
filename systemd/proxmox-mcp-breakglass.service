@@ -1,0 +1,13 @@
+[Unit]
+Description=Execute one signed Proxmox MCP model break-glass action
+
+[Service]
+Type=oneshot
+User=root
+Group=root
+EnvironmentFile=/etc/proxmox-mcp-bridge/service.env
+ExecStart=/usr/bin/node /opt/proxmox-mcp-bridge/dist/breakglass-runner.js
+PrivateTmp=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes

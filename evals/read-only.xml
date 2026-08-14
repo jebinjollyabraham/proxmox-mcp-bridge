@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<evaluation>
+  <qa_pair><question>Use the installed schema rather than prior knowledge. How many API methods are mapped on this host? Answer with one integer.</question><answer>646</answer></qa_pair>
+  <qa_pair><question>Inspect cluster membership and return the single Proxmox node name.</question><answer>infra</answer></qa_pair>
+  <qa_pair><question>Inspect the node CPU topology. How many logical CPU threads does the host report? Answer with one integer.</question><answer>32</answer></qa_pair>
+  <qa_pair><question>Find the QEMU guest whose name identifies the HealthEye development environment. Return only its numeric VM ID.</question><answer>202</answer></qa_pair>
+  <qa_pair><question>For VM 202, identify the node on which it is configured. Return only the node name.</question><answer>infra</answer></qa_pair>
+  <qa_pair><question>Inspect the bridge schema metadata and return the HTTP method used by the endpoint that lists cluster resources.</question><answer>GET</answer></qa_pair>
+  <qa_pair><question>Inspect the API schema for deleting a QEMU guest. What risk label does the bridge assign? Return one lowercase word.</question><answer>destructive</answer></qa_pair>
+  <qa_pair><question>Inspect storage and identify the LVM-thin storage ID used for VM disks. Return only the ID.</question><answer>local-lvm</answer></qa_pair>
+  <qa_pair><question>Inspect the installed version endpoint. What Proxmox VE major version is running? Answer with one integer.</question><answer>9</answer></qa_pair>
+  <qa_pair><question>Compare the model repository and data-collection logical volumes. Which one is protected by the bridge's immutable guard? Return only its storage name.</question><answer>model-repo</answer></qa_pair>
+</evaluation>

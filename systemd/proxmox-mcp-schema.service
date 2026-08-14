@@ -1,0 +1,11 @@
+[Unit]
+Description=Refresh Proxmox MCP API registry
+After=proxmox-mcp-helper.service
+
+[Service]
+Type=oneshot
+User=root
+Group=proxmox-mcp
+EnvironmentFile=/etc/proxmox-mcp-bridge/service.env
+ExecStart=/usr/bin/node /opt/proxmox-mcp-bridge/dist/cli.js schema refresh
+ExecStartPost=/bin/systemctl try-restart proxmox-mcp.service

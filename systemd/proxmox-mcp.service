@@ -1,0 +1,28 @@
+[Unit]
+Description=Proxmox MCP Bridge
+After=network-online.target proxmox-mcp-helper.service
+Requires=proxmox-mcp-helper.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=proxmox-mcp
+Group=proxmox-mcp
+EnvironmentFile=/etc/proxmox-mcp-bridge/service.env
+ExecStart=/usr/bin/node /opt/proxmox-mcp-bridge/dist/http.js
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+ReadWritePaths=/var/lib/proxmox-mcp-bridge /var/log/proxmox-mcp-bridge
+ReadOnlyPaths=/etc/proxmox-mcp-bridge /usr/share/pve-docs/api-viewer/apidoc.js /etc/pve/pve-root-ca.pem
+RestrictSUIDSGID=yes
+LockPersonality=yes
+
+[Install]
+WantedBy=multi-user.target

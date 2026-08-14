@@ -1,0 +1,9 @@
+[Unit]
+Description=Watch the installed Proxmox API schema
+
+[Path]
+PathChanged=/usr/share/pve-docs/api-viewer/apidoc.js
+Unit=proxmox-mcp-schema.service
+
+[Install]
+WantedBy=multi-user.target

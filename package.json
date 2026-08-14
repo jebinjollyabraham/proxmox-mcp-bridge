@@ -1,0 +1,37 @@
+{
+  "name": "proxmox-mcp-bridge",
+  "version": "0.1.0",
+  "description": "Policy-aware MCP bridge for Proxmox VE APIs and host operations",
+  "type": "module",
+  "main": "dist/http.js",
+  "bin": {
+    "proxmox-mcp": "dist/cli.js",
+    "proxmox-mcp-stdio": "dist/stdio.js",
+    "proxmox-mcp-helper": "dist/helper.js",
+    "proxmox-mcp-breakglass": "dist/breakglass-runner.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "clean": "rm -rf dist",
+    "start": "node dist/http.js",
+    "stdio": "node dist/stdio.js",
+    "helper": "node dist/helper.js",
+    "test": "npm run build && node --test dist/tests/*.test.js"
+  },
+  "engines": { "node": ">=20" },
+  "dependencies": {
+    "@modelcontextprotocol/express": "2.0.0",
+    "@modelcontextprotocol/node": "2.0.0",
+    "@modelcontextprotocol/server": "2.0.0",
+    "express": "^5.1.0",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.3",
+    "@types/node": "^24.0.0",
+    "typescript": "^5.9.0"
+  },
+  "license": "Apache-2.0",
+  "repository": { "type": "git", "url": "git+https://github.com/jebinjollyabraham/proxmox-mcp-bridge.git" },
+  "keywords": ["proxmox", "mcp", "model-context-protocol", "automation"]
+}
