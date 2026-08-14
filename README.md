@@ -2,7 +2,7 @@
 
 A policy-aware Model Context Protocol server for Proxmox VE. It maps the API schema installed on the host, provides compact and expanded MCP tool modes, supports Streamable HTTP and stdio, and adds guarded host command and filesystem operations.
 
-This first release targets the `infra` Proxmox VE 9.1.1 host. Portability to other releases is experimental.
+The first release targets Proxmox VE 9.x. Portability to other releases is experimental.
 
 ## Capabilities
 
@@ -16,21 +16,32 @@ This first release targets the `infra` Proxmox VE 9.1.1 host. Portability to oth
 
 ## Install on Proxmox
 
+Prerequisites:
+
+- A Proxmox VE 9.x host and root shell.
+- Internet access during installation for Debian packages and npm dependencies.
+- Optional Tailscale installed, logged in, and active if Tailnet access is selected.
+- A private RFC1918 address if private-LAN access is selected.
+
 ```bash
 git clone https://github.com/jebinjollyabraham/proxmox-mcp-bridge.git /root/tools/proxmox-mcp-bridge
 cd /root/tools/proxmox-mcp-bridge
 ./scripts/install.sh
 ```
 
-The installer creates a dedicated Proxmox service identity, system users, systemd units, a local TLS CA, and the first root-profile MCP key. Its one-time plaintext is written to `/root/proxmox-mcp-initial-key.json` with mode `0600`; only the scrypt hash remains in bridge state.
+The interactive installer asks whether this installation should be reachable through localhost, Tailscale, a private LAN, or both Tailscale and LAN. It detects the current host's values and writes them only to `/etc/proxmox-mcp-bridge/service.env`; no installation-specific hostname or address belongs in this repository.
+
+The installer creates a dedicated Proxmox service identity, system users, systemd units, a local TLS CA, and the first root-profile MCP key. Its one-time plaintext is written to `/root/proxmox-mcp-initial-key.json` with mode `0600`; only the scrypt hash remains in bridge state. The MCP bearer key is separate from the internal Proxmox API token.
 
 Endpoints:
 
-- Tailnet: `https://proxmox.example-tailnet.ts.net/mcp`
-- Office LAN: `https://192.168.1.100:9444/mcp`
+- Tailnet example: `https://your-proxmox-host.your-tailnet.ts.net/mcp`
+- Private-LAN example: `https://192.168.1.100:9444/mcp`
 - Loopback: `http://127.0.0.1:8765/mcp`
 
-The installer adds the Tailnet `/mcp` route without resetting other Tailscale Serve routes. LAN clients must trust `/etc/proxmox-mcp-bridge/pki/ca.crt`.
+The installer prints the actual endpoints for that installation. It adds the Tailnet `/mcp` route without resetting other Tailscale Serve routes. LAN clients must trust `/etc/proxmox-mcp-bridge/pki/ca.crt`. The bridge never intentionally binds to a public address.
+
+For unattended installation, set `PMCP_SETUP_MODE` to `local`, `tailscale`, `lan`, or `both`. `PMCP_LAN_HOST` is required for LAN modes unless a private address can be detected. `PMCP_TAILSCALE_HOST` can override Tailscale DNS-name detection.
 
 ## Key management
 
@@ -48,7 +59,7 @@ Key secrets are returned once. Rotation atomically revokes the prior key. Use th
 
 At startup the bridge extracts only the JSON array assigned to `const apiSchema` in `/usr/share/pve-docs/api-viewer/apidoc.js`; it never evaluates JavaScript. The normalized registry records method, template path, parameter and return schemas, permissions, token support, risk, and a deterministic expanded tool name.
 
-`proxmox-mcp-schema.path` watches the official schema. A valid update replaces the cache and restarts the bridge. A malformed update leaves the last-known-good cache active and surfaces the error through `proxmox_schema_status` and `/healthz`.
+`proxmox-mcp-schema.path` watches the official schema. A valid update replaces the cache and restarts the bridge. A malformed update leaves the last-known-good cache active and surfaces the error through `proxmox_schema_status` and `/healthy`.
 
 ## Safety boundary
 
