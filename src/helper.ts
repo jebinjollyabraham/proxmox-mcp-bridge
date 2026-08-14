@@ -7,10 +7,12 @@ import { spawn } from "node:child_process";
 import { config } from "./config.js";
 import type { HelperRequest, HelperResponse, JsonObject, JsonValue } from "./types.js";
 import { asJsonValue, canonicalJson, errorMessage } from "./util.js";
+import { buildSandboxedCommand } from "./command-sandbox.js";
 
 const PROTECTED = [...config.protectedPaths, ...config.protectedIdentifiers].map((item) => item.toLowerCase());
 const READ_ONLY_EXECUTABLES = new Set(["cat", "df", "du", "file", "find", "grep", "head", "ls", "rg", "sha256sum", "stat", "tail", "wc"]);
 const NEVER_EXECUTE = new Set(["systemd-run"]);
+const PROTECTED_SERVICES = new Set(["proxmox-mcp.service", "proxmox-mcp-helper.service", "proxmox-mcp-schema.service", "proxmox-mcp-schema.path", "proxmox-mcp-breakglass.service", "proxmox-mcp-breakglass.path"]);
 
 function stringParam(params: JsonObject, key: string, required = true): string {
   const value = params[key]; if (typeof value === "string") return value; if (!required) return ""; throw new Error(`Helper parameter '${key}' must be a string`);
@@ -46,6 +48,11 @@ async function spawnCapture(command: string, args: string[], cwd: string | undef
     child.on("close", (code, signal) => { clearTimeout(timer); resolve({ command, args, cwd: cwd ?? null, exitCode: code, signal, stdout, stderr, truncated }); });
   });
 }
+async function spawnSandboxed(command: string, args: string[], cwd: string | undefined, timeoutMs: number): Promise<JsonValue> {
+  const sandbox = buildSandboxedCommand(command, args, cwd, timeoutMs); const result = await spawnCapture(sandbox.command, sandbox.args, undefined, sandbox.timeoutMs);
+  if (!result || typeof result !== "object" || Array.isArray(result)) return result;
+  return { ...(result as JsonObject), command, args, cwd: cwd ?? null };
+}
 function objectParams(value: JsonValue | undefined): JsonObject {
   if (value && !Array.isArray(value) && typeof value === "object") return value as JsonObject; return {};
 }
@@ -67,7 +74,7 @@ async function execute(request: HelperRequest): Promise<JsonValue> {
       if (NEVER_EXECUTE.has(base)) throw new Error(`Execution of '${base}' is blocked by the helper`);
       if (containsProtected({ command, args }) && !READ_ONLY_EXECUTABLES.has(base)) throw new Error("Command may modify the protected model repository; use break-glass");
       const cwd = typeof params.cwd === "string" ? await resolvedTarget(params.cwd) : undefined;
-      return spawnCapture(command, args, cwd, Math.min(numberParam(params, "timeoutMs", 30000), 900000));
+      return spawnSandboxed(command, args, cwd, Math.min(numberParam(params, "timeoutMs", 30000), 900000));
     }
     case "fs_read": {
       const target = await resolvedTarget(stringParam(params, "path")); const encoding = params.encoding === "base64" ? null : "utf8";
@@ -97,6 +104,7 @@ async function execute(request: HelperRequest): Promise<JsonValue> {
       const service = stringParam(params, "service"); const action = stringParam(params, "action");
       if (!/^[a-zA-Z0-9@_.:-]+$/.test(service)) throw new Error("Invalid systemd service name");
       if (!["start", "stop", "restart", "reload", "enable", "disable"].includes(action)) throw new Error("Unsupported systemd service action");
+      if (PROTECTED_SERVICES.has(service)) throw new Error("Bridge guard services cannot be changed through MCP");
       return spawnCapture("/bin/systemctl", [action, "--", service], undefined, 120000);
     }
     case "breakglass_submit": {
